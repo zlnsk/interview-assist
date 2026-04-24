@@ -68,6 +68,12 @@ pm2 start ecosystem.config.js
 
 The `shared-auth` OTP module is resolved via `SHARED_MODULES_DIR` symlink — vendor it locally or point the env var at your module dir.
 
+---
+
+> 🤖 **Full disclosure:** I didn't even write this README. An LLM did. I read it once, nodded, and pushed. If a sentence lands flat, blame the machine; the PR button is right up there.
+
+---
+
 ## License
 
 MIT. Use it, break it, fix it, PR it.
