@@ -1,119 +1,73 @@
-# InterviewAssist
+# interview-assist
 
-AI-powered live interview assistant. Streams shared tab audio to
-[Deepgram](https://deepgram.com) for real-time transcription, then feeds the
-interviewer's question plus your uploaded CV / job description to an LLM
-(via [OpenRouter](https://openrouter.ai)) to generate a concise, first-person
-answer you can read while the interview is happening.
+> Live interview coaching for the chronically unprepared.
 
-## Features
+Share a browser tab (the one with your Zoom / Teams / Meet), this quietly listens, auto-detects questions, and streams a strong first-person answer onto your screen before you've finished saying *"that's a great question"*. If your mic is on, it also records your actual delivery and grades you on it after. Welcome to the **tremendous** future of interviewing.
 
-### Core
-- Live speech-to-text via Deepgram Nova-3 (diarization, interim results, VAD)
-- Streaming LLM answers via OpenRouter
-- Contextual answers grounded in your own CV + job description
-- PDF / TXT / Markdown document upload, persisted server-side
-- Per-user session question logging
-- Auth via shared OTP module (`the shared-auth module (see setup)`)
+---
 
-### Modes (v1.1)
-Six interview-assistant modes you can switch between with the chip row or `1`–`6`:
+## What it does
 
-- **Answer** — concise first-person answer (≤90 / 130 words)
-- **Clarify** — generates a clarifying question to buy time
-- **Follow-ups** — 2–3 smart questions you can ask the interviewer back
-- **STAR** — Situation / Task / Action / Result for behavioural questions
-- **Code** — coding-interview script: `[SAY THIS FIRST]` + `[THE CODE]` + `[SAY THIS AFTER]` + `[COMPLEXITY]`
-- **Bridge** — short stalling sentence when you've gone silent
+1. You share the tab where the interviewer lives. The tab audio streams to **Deepgram Nova-3** for real-time transcription.
+2. Your own mic opens a second channel so the app captures what YOU say too. That stream isn't used live — it's saved for the recap.
+3. A question is detected → the assistant streams an answer card, grounded in your CV, the JD, your cover letter, and any custom coaching prompt you set for *this* interview.
+4. Re-run the same question in a different mode: `STAR`, `Code`, `Clarify`, `Bridge`, `Follow-ups`. Or apply a refinement: `Shorter`, `Longer`, `More confident`, `Simpler`, `+ Example`, `Redo`, `Rephrase`.
+5. When it's over, open the **Recap**: every question the interviewer asked, how *you* actually answered (from your mic transcript — not the assistant's output), what landed, what flopped, what to practise next time.
 
-### Refinements
-Each answer card has chips and hotkeys for re-runs in a different style:
-shorter, longer, add example, more confident, simpler, rephrase. Refinement
-intent is also auto-detected from the user's own utterances ("make it shorter",
-"give me an example", etc.).
+## Why I built it
 
-### Prompt caching
-The CV + JD block is sent as a `cache_control: { type: "ephemeral" }` content
-block, so subsequent calls re-use the cached prefix at ~10× cheaper input cost
-and lower TTFT.
+I kept getting asked *"what project most excited you in the last three years?"* and answering with whatever I happened to remember at 02:00 the night before. Not any more. Now a pattern-matching silicon ghost does the remembering; I do the charm.
 
-### Picture-in-Picture answers
-A standalone always-on-top window (Document Picture-in-Picture API in
-Chrome / Edge) mirrors the latest answer so you can keep reading it while the
-main browser tab is hidden behind your video call.
+Interviewing is performance, and performance without rehearsal is stand-up comedy without jokes. This gives you rehearsal *while* you perform. Ethically adjacent. Legally fine in the jurisdictions I've checked. Very **tremendous**.
 
-### Light RAG
-For huge CVs, optional RAG mode chunks docs and only injects the top
-keyword-scored chunks per question (no embeddings, no DB — single-file in-memory).
+And yes — the whole thing was built with an LLM riding shotgun, because I'm not writing WebSocket reconnect logic by hand when I could be reading. Being honest about AI-in-the-loop is more dignified than pretending it wrote itself.
 
-### Personas
-Saved system-prompt presets you can apply per question (e.g. "Senior backend,
-fintech, Polish-speaking interviewer", "EM behavioural round").
+## The "Job" concept
 
-### Pre-interview prep mode
-Given your CV + JD, generates a prep brief: 8 likely questions, gap analysis,
-3 ready-to-use STAR stories drawn from the CV, and 5 smart questions to ask
-the interviewer.
+Every interview is a **Job** — a per-interview bundle of:
 
-### Post-interview recap
-Per-session report: questions asked, strongest answers, answers to revise,
-likely follow-ups for the next round, and a thank-you-note draft.
+- **Job description** (paste it; Haiku-4.5 auto-extracts position / organisation / seniority / competencies)
+- **Your actual application** (cover letter, answers you submitted on the form)
+- **Your resume** (uploaded once, shared across all jobs)
+- **A custom coaching prompt** ("lean into the CMRE HPC story", "avoid discussing comp", "this is a staff-level infra role, not an IC role")
 
-### Calendar integration (ICS)
-Paste a Google Calendar `.ics` secret address. The app fetches upcoming
-events whose title or description matches `interview / screen / round /
-coding / technical / behavioural / hiring`, lets you import an event's
-description as a JD document with one click.
+When the Job is active, every answer request injects the whole bundle as a **stable, prompt-cache-friendly system prompt**. Anthropic prompt caching actually catches, so every follow-up question in a 45-minute interview comes back for pennies instead of dollars.
 
-### Web search grounding (optional)
-Set `TAVILY_API_KEY` to enable on-demand Tavily search before answering
-"what's new in X" type questions.
+## Design
 
-### Token / cost dashboard
-Per-user usage log: total cost, requests, cache-hit rate, average TTFT, daily
-breakdown, by-model and by-mode breakdowns. Top-right pill shows today's spend.
+Transplanted wholesale from the sibling [matrix-client](https://github.com/zlnsk/matrix-client) — Google-Messages-flavoured:
 
-### Hotkeys
-| Key | Action |
-|-----|--------|
-| `Space` | Re-answer the last detected question |
-| `1`–`6` | Switch mode |
-| `R` / `Shift+R` | Refine: shorter / longer |
-| `E` | Refine: add example |
-| `S` | Refine: simpler / less jargon |
-| `C` | Clear answers |
-| `Y` | Copy last answer to clipboard |
-| `M` | Toggle menu drawer |
-| `P` | Pop out answers (Picture-in-Picture) |
-| `?` | Show shortcuts help |
-| `Esc` | Close drawer / modal |
+- **Roboto** with the nice stylistic alternates (`cv02 cv03 cv04 cv11 ss01 ss03`)
+- **18 px answer bubbles** with hairline `color-mix` borders, no shadows at rest
+- **Glass topbar** with `saturate(180%) blur(14px)` and a thin hairline underborder
+- **Elapsed-interview timer** that starts on *Share Tab Audio*, freezes on stop — so you know whether to wrap up or dig in
+- **Every mode / refinement is a per-card chip**. The topbar stays quiet. The last thing you want during an interview is a busy UI.
 
-## Environment variables
+Respects `prefers-reduced-motion: reduce` — during an actual interview, a bouncing bubble in peripheral vision is the last thing your nervous system needs.
 
-Copy `.env.example` to `.env` (or use `ecosystem.config.example` with PM2)
-and fill in:
+## Security
 
-- `PORT` — HTTP port (default `3014`)
-- `APP_URL` — public URL of the app, sent as `HTTP-Referer` to OpenRouter
-- `DEEPGRAM_API_KEY` — required for transcription
-- `OPENROUTER_API_KEY` — required for answer generation
-- `TAVILY_API_KEY` — *optional*, enables `/api/search` web grounding
+- **Auth is OTP** via email + HMAC-signed session cookies. No stored passwords, no social login, no OAuth tokens hanging around.
+- **Tab audio streams direct to Deepgram** over an authenticated WebSocket. Nothing is persisted server-side beyond the session-local JSONL transcript, which you can delete at will.
+- **Your mic recording is opt-in**. If `getUserMedia` is denied, the app runs in single-channel mode — the app still works; the recap just won't grade your delivery.
+- **Your CV, JDs, applications, and coaching prompts stay on your server.** No analytics, no upstream beacons, no "anonymous" telemetry.
+- **Rate-limits on every LLM endpoint** (`answer` 30/min, `prep` 5/min, `recap` 5/min, `classify` 120/min, `search` 30/min). A runaway client doesn't drain your OpenRouter balance.
+- **No `X-Forwarded-User` trust.** Auth is enforced by OTP cookie + a proxy-secret header check the reverse proxy injects. Fail-closed, not fail-open.
+- **PDF uploads size-capped + path-sanitised.** Filename collisions can't escape the uploads directory.
 
-## Upload your own CV
+## Run it
 
-1. Start the app and open it in your browser.
-2. Open the menu drawer (`M`) → **Docs** tab → upload your resume PDF and the
-   job description.
-3. The server extracts text with `pdf-parse`, chunks it, and stores metadata
-   in `uploads/meta.json`. The `uploads/` directory is git-ignored — your CV
-   never leaves the machine.
-
-## Install & run
+Needs Node 22+, a Deepgram API key, an OpenRouter API key, and a reverse proxy doing TLS + injecting an `X-Proxy-Secret` header.
 
 ```bash
+cp ecosystem.config.example ecosystem.config.js
+# fill in DEEPGRAM_API_KEY, OPENROUTER_API_KEY, OTP_SESSION_SECRET, OTP_ALLOWED_EMAILS
 npm install
-cp .env.example .env   # fill in keys
-node server.js
+pm2 start ecosystem.config.js
 ```
 
-Or with PM2: `cp ecosystem.config.example ecosystem.config.js && pm2 start ecosystem.config.js`.
+The `shared-auth` OTP module is resolved via `SHARED_MODULES_DIR` symlink — vendor it locally or point the env var at your module dir.
+
+## License
+
+MIT. Use it, break it, fix it, PR it.
