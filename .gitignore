@@ -1,0 +1,23 @@
+ecosystem.config.js
+ecosystem.config.cjs
+.env
+.env.local
+.env.production*
+node_modules/
+uploads/
+uploads/*
+sessions/
+*.log
+.DS_Store
+
+# all backups
+*.bak*
+
+# backup/audit snapshots
+*.bak
+*.bak-*
+*.bak*
+*.orig
+*.old
+*.pre-*
+*-pre-*

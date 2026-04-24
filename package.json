@@ -1,0 +1,17 @@
+{
+  "name": "interview",
+  "version": "1.1.0",
+  "private": true,
+  "scripts": {
+    "start": "node server.js",
+    "postinstall": "node -e \"const fs=require('fs'),p=require('path');const root=process.env.SHARED_MODULES_DIR;if(!root)return;for(const m of ['shared-auth','shared-m3','shared-ai','shared-amadeus']){const d=p.join('node_modules',m);if(!fs.existsSync(d)){fs.mkdirSync('node_modules',{recursive:true});try{fs.symlinkSync(p.join(root,m),d,'dir')}catch(e){}}}\""
+  },
+  "dependencies": {
+    "cookie": "^1.1.1",
+    "dotenv": "^17.4.2",
+    "express": "^5.2.1",
+    "multer": "^2.1.1",
+    "pdf-parse": "^1.1.1",
+    "ws": "^8.20.0"
+  }
+}

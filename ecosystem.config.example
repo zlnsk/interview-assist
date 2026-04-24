@@ -1,0 +1,23 @@
+module.exports = {
+  apps: [{
+    name: "InterviewAssist",
+    script: "server.js",
+    cwd: "/app",
+    watch: false,
+    max_memory_restart: "256M",
+    env: {
+      NODE_ENV: "production",
+      PORT: 3014,
+      APP_URL: "REPLACE_ME",
+      DEEPGRAM_API_KEY: "REPLACE_ME",
+      OPENROUTER_API_KEY: "REPLACE_ME",
+      OTP_JMAP_URL: "REPLACE_ME",
+      OTP_JMAP_USER: "REPLACE_ME",
+      OTP_JMAP_PASS: "REPLACE_ME",
+      OTP_FROM_EMAIL: "REPLACE_ME",
+      OTP_SESSION_SECRET: "REPLACE_ME",
+      OTP_SESSION_HOURS: "8",
+      OTP_ALLOWED_EMAILS: "REPLACE_ME",
+    }
+  }]
+};

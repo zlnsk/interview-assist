@@ -1,0 +1,361 @@
+<!DOCTYPE html>
+<html lang="en" data-app="interviewassist">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Interview Assistant</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;600;700&display=swap">
+  <link rel="stylesheet" href="/Interview/m3-tokens.css">
+  <link rel="stylesheet" href="/Interview/m3-components.css">
+  <link rel="stylesheet" href="/Interview/m3-overlay.css">
+  <link rel="stylesheet" href="/Interview/styles.css?v=mx1">
+  <style>:root { --m3-source-hue: 210; }</style>
+</head>
+<body>
+  <div id="app">
+    <!-- Top Bar -->
+    <header id="topbar">
+      <div class="topbar-cluster topbar-left">
+        <h1 class="m3-brand-title topbar-brand">INTERVIEW</h1>
+        <div class="m3-chip status-chip" id="statusPill" role="status" aria-live="polite">
+          <span class="dot" aria-hidden="true"></span>
+          <span class="label">Ready</span>
+        </div>
+        <div class="m3-chip timer-chip" id="ivTimer" aria-live="off" title="Elapsed since capture started">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
+          <span class="timer-text">00:00</span>
+        </div>
+        <button id="activeJobChip" class="m3-chip active-job-chip" type="button" title="Active interview — click to switch" style="display:none">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="3" y="7" width="18" height="13" rx="2"/><path d="M8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+          <span class="job-chip-text"></span>
+        </button>
+      </div>
+      <div class="topbar-cluster topbar-right">
+        <button id="usagePill" class="m3-chip" title="Click for full usage dashboard" type="button">$0.00 today</button>
+        <label class="model-select-wrap">
+          <select id="modelSelect" class="model-select" title="Model">
+            <option value="haiku">Haiku 4.5</option>
+            <option value="sonnet" selected>Sonnet 4.6</option>
+            <option value="opus">Opus 4.6</option>
+          </select>
+        </label>
+        <button id="btnPip" class="m3-icon-btn" title="Pop out answers (P)" aria-label="Pop out answers" style="display:none">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="5" width="18" height="14" rx="2"/><rect x="12" y="11" width="7" height="6" rx="1" fill="currentColor"/></svg>
+        </button>
+        <button id="btnNewInterview" class="m3-btn m3-btn-outlined btn-new-interview" type="button" title="Start a new interview with JD + application + resume bundled">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          <span>New Interview</span>
+        </button>
+        <button id="btnMenu" class="m3-icon-btn" title="Menu (M)" aria-label="Menu">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+        </button>
+        <button id="btnCapture" class="m3-btn m3-btn-filled">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="3" fill="currentColor"/></svg>
+          <span>Share Tab Audio</span>
+        </button>
+        <button id="btnStop" class="m3-btn m3-btn-filled m3-btn-error" style="display:none">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><rect x="6" y="6" width="12" height="12" rx="2"/></svg>
+          <span>Stop</span>
+        </button>
+        <button id="btnCloseInterview" class="m3-btn m3-btn-outlined" title="Close interview and show questions summary">
+          <span>Close Interview</span>
+        </button>
+      </div>
+    </header>
+
+    <!-- Left column (70%) — AI Answers -->
+    <div id="answerPanel">
+      <div class="panel-header panel-header-slim">
+        <h2 class="m3-section-label">Assistant</h2>
+      </div>
+      <div id="answers" class="scroll-area">
+        <div class="empty-state">
+          <p>Answers will appear here when questions are detected</p>
+          <p class="hint">Press <kbd>?</kbd> for keyboard shortcuts</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Right column (30%) — shared-tab video mini + transcript/speakers -->
+    <aside id="sidePanel">
+      <div id="videoMini" class="empty">
+        <video id="pipVideo" muted playsinline></video>
+        <div class="video-empty">Shared tab preview appears here</div>
+      </div>
+
+      <div id="transcriptPanel">
+        <div class="panel-header">
+          <h2 class="m3-section-label">Transcript</h2>
+          <div class="speaker-legend" id="speakerLegend"></div>
+        </div>
+        <div id="transcript" class="scroll-area">
+          <div class="empty-state">
+            <p>Share a tab's audio to start transcribing</p>
+            <p class="hint">Click "Share Tab Audio" and select the tab with your interview call</p>
+          </div>
+        </div>
+      </div>
+    </aside>
+  </div>
+
+  <!-- Unified menu drawer with tabs -->
+  <div id="menuDrawer" class="drawer hidden">
+    <div class="drawer-header">
+      <div class="drawer-tabs">
+        <button class="tab active" data-tab="jobs">Jobs</button>
+        <button class="tab" data-tab="docs">Docs</button>
+        <button class="tab" data-tab="personas">Personas</button>
+        <button class="tab" data-tab="vocab">Vocab</button>
+        <button class="tab" data-tab="sessions">Sessions</button>
+        <button class="tab" data-tab="usage">Usage</button>
+        <button class="tab" data-tab="prep">Prep</button>
+      </div>
+      <button id="btnCloseDrawer" class="m3-btn m3-btn-outlined">Close</button>
+    </div>
+    <div class="drawer-body">
+      <!-- Jobs tab — per-interview bundles (JD + application + resume + prompt) -->
+      <section class="tab-pane active" data-pane="jobs">
+        <div class="row" style="justify-content:space-between;align-items:center;margin-bottom:10px">
+          <p class="hint-text" style="margin:0">One job = one interview. When active, every answer uses its JD, application, resume, and coaching.</p>
+          <button id="btnNewInterviewDrawer" class="m3-btn m3-btn-filled">+ New</button>
+        </div>
+        <div id="jobsList"></div>
+      </section>
+
+      <!-- Docs tab -->
+      <section class="tab-pane" data-pane="docs">
+        <form id="uploadForm">
+          <select id="docType">
+            <option value="resume">Resume / CV</option>
+            <option value="job_description">Job Description</option>
+            <option value="other">Other</option>
+          </select>
+          <label class="file-input-label">
+            <input type="file" id="fileInput" accept=".pdf,.txt,.md">
+            Choose file
+          </label>
+          <button type="submit" class="m3-btn m3-btn-filled">Upload</button>
+        </form>
+        <p class="hint-row">
+          <label class="checkbox-row">
+            <input type="checkbox" id="ragToggle">
+            <span>RAG mode (only inject top chunks per question — for huge docs)</span>
+          </label>
+        </p>
+        <div id="docsList"></div>
+      </section>
+
+      <!-- Personas tab -->
+      <section class="tab-pane" data-pane="personas">
+        <p class="hint-text">Saved system-prompt presets you can apply per question.</p>
+        <form id="personaForm" class="stacked-form">
+          <input type="hidden" id="personaId">
+          <input type="text" id="personaName" placeholder="Name (e.g. Senior backend, fintech)" maxlength="80">
+          <textarea id="personaPrompt" placeholder="Custom instructions to prepend to the system prompt…" rows="6" maxlength="4000"></textarea>
+          <div class="row">
+            <select id="personaModel">
+              <option value="sonnet">Sonnet</option>
+              <option value="opus">Opus</option>
+            </select>
+            <select id="personaDefaultMode">
+              <option value="answer">Default mode: Answer</option>
+            </select>
+            <button type="submit" class="m3-btn m3-btn-filled">Save</button>
+          </div>
+        </form>
+        <div id="personasList"></div>
+      </section>
+
+      <!-- Vocab tab — Deepgram keyterm prompting -->
+      <section class="tab-pane" data-pane="vocab">
+        <p class="hint-text">
+          Words and phrases Deepgram should prefer in transcription.
+          One per line. Max 50 terms × 100 chars each. Ideal for company
+          names, tech stack, candidate names, product names — anything the
+          base model would otherwise mis-spell. Applies on next capture start.
+        </p>
+        <textarea id="vocabTerms" placeholder="Kubernetes&#10;Anthropic&#10;Sonnet 4.6&#10;FastAPI&#10;Jane Doe" rows="10" style="width:100%;font-family:ui-monospace,monospace;font-size:0.9rem"></textarea>
+        <div class="row" style="margin-top:0.5rem;align-items:center">
+          <span id="vocabCount" class="hint-text" style="flex:1">0 terms</span>
+          <button id="btnSaveVocab" class="m3-btn m3-btn-filled">Save</button>
+        </div>
+      </section>
+
+      <!-- Sessions tab -->
+      <section class="tab-pane" data-pane="sessions">
+        <div id="ivLabelBox">
+          <div class="iv-box-label">Current interview</div>
+          <div class="iv-box-row">
+            <input type="text" id="ivPosition" class="iv-input" placeholder="Position (e.g. Senior Backend Engineer)" autocomplete="off" spellcheck="false">
+            <span class="iv-sep">at</span>
+            <input type="text" id="ivOrganisation" class="iv-input" placeholder="Organisation" autocomplete="off" spellcheck="false">
+            <span id="ivLabelStatus" class="iv-status" aria-live="polite"></span>
+          </div>
+        </div>
+        <p class="hint-text">Past interview sessions. Click "Recap" to generate a coach review.</p>
+        <div id="sessionsList"></div>
+      </section>
+
+      <!-- Usage tab -->
+      <section class="tab-pane" data-pane="usage">
+        <div class="row" style="margin-bottom:0.6rem">
+          <select id="usageRange">
+            <option value="1">Today</option>
+            <option value="7" selected>7 days</option>
+            <option value="30">30 days</option>
+            <option value="90">90 days</option>
+          </select>
+          <button id="btnRefreshUsage" class="m3-btn m3-btn-text">Refresh</button>
+        </div>
+        <div id="usageStats"></div>
+      </section>
+
+      <!-- Prep tab -->
+      <section class="tab-pane" data-pane="prep">
+        <p class="hint-text">Generate a pre-interview brief using your CV + the selected JD: likely questions, gap analysis, STAR stories, smart questions to ask back.</p>
+        <textarea id="prepJd" placeholder="(Optional) Paste an extra JD here to use in addition to uploaded docs…" rows="4" style="width:100%"></textarea>
+        <div class="row" style="margin-top:0.5rem">
+          <select id="prepModel">
+            <option value="sonnet">Sonnet</option>
+            <option value="opus">Opus</option>
+          </select>
+          <button id="btnRunPrep" class="m3-btn m3-btn-filled">Generate prep brief</button>
+        </div>
+        <div id="prepOutput" class="prose-output"></div>
+      </section>
+    </div>
+  </div>
+
+  <!-- Identify Speaker Modal -->
+  <div id="speakerModal" class="modal hidden">
+    <div class="modal-content">
+      <h3>Which speaker are you?</h3>
+      <p>We detected multiple speakers. Tap the one that's you so we focus AI answers on the interviewer's questions.</p>
+      <div id="speakerOptions"></div>
+      <label class="checkbox-row" style="justify-content:center;margin-top:0.4rem">
+        <input type="checkbox" id="autoPickSpeaker">
+        <span>Auto-pick the second speaker next time (interviewer = first)</span>
+      </label>
+      <button id="btnSkipSpeaker" class="m3-btn m3-btn-text">Skip — I'll set it later</button>
+    </div>
+  </div>
+
+  <!-- Recap Modal -->
+  <div id="recapModal" class="modal hidden">
+    <div class="modal-content modal-wide">
+      <div class="row" style="justify-content:space-between;align-items:center">
+        <h3>Session Recap</h3>
+        <button id="btnCloseRecap" class="m3-btn m3-btn-text">Close</button>
+      </div>
+      <div id="recapOutput" class="prose-output"></div>
+    </div>
+  </div>
+
+  <!-- Close Interview — questions summary -->
+  <div id="closeInterviewModal" class="modal hidden">
+    <div class="modal-content modal-wide">
+      <div class="row" style="justify-content:space-between;align-items:center">
+        <h3>Interview questions</h3>
+        <div style="display:flex;gap:8px">
+          <button id="btnCopyQuestions" class="m3-btn m3-btn-text">Copy</button>
+          <button id="btnCloseInterviewModal" class="m3-btn m3-btn-text">Close</button>
+        </div>
+      </div>
+      <ol id="closeInterviewList" class="prose-output" style="padding-left:1.25em;margin-top:8px"></ol>
+    </div>
+  </div>
+
+  <!-- New Interview wizard -->
+  <div id="jobModal" class="modal hidden">
+    <div class="modal-content modal-wide">
+      <div class="row" style="justify-content:space-between;align-items:center">
+        <h3 id="jobModalTitle">New Interview</h3>
+        <button id="btnCloseJobModal" class="m3-btn m3-btn-text">Close</button>
+      </div>
+      <div class="job-wizard">
+        <div class="job-field">
+          <label>Job description</label>
+          <textarea id="jobJd" rows="8" placeholder="Paste the full JD here…"></textarea>
+          <div class="row" style="justify-content:flex-end;gap:8px;margin-top:6px">
+            <span id="jobExtractStatus" class="hint-text" style="flex:1"></span>
+            <button id="btnExtractJob" class="m3-btn m3-btn-outlined" type="button">✨ Extract details from JD</button>
+          </div>
+        </div>
+
+        <div class="row job-meta-row">
+          <div class="job-field" style="flex:1.3">
+            <label>Position</label>
+            <input type="text" id="jobPosition" placeholder="e.g. Senior Backend Engineer">
+          </div>
+          <div class="job-field" style="flex:1">
+            <label>Organisation</label>
+            <input type="text" id="jobOrganisation" placeholder="e.g. Anthropic">
+          </div>
+          <div class="job-field" style="flex:0.8">
+            <label>Seniority</label>
+            <input type="text" id="jobSeniority" placeholder="senior">
+          </div>
+        </div>
+
+        <div class="job-field">
+          <label>Competencies this role will probe</label>
+          <div id="jobCompetencies" class="competencies-chips"></div>
+          <input type="text" id="jobCompetenciesInput" placeholder="Type a competency + Enter to add">
+        </div>
+
+        <div class="job-field">
+          <label>Your application (cover letter, answers you submitted)</label>
+          <textarea id="jobApplication" rows="5" placeholder="Paste what you actually sent them…"></textarea>
+        </div>
+
+        <div class="job-field">
+          <label>Resume</label>
+          <select id="jobResumeSelect">
+            <option value="">— Pick an existing resume, or leave blank —</option>
+          </select>
+          <p class="hint-text" style="margin-top:4px">Upload resumes in the Docs tab. Pick one here; it stays shared across jobs.</p>
+        </div>
+
+        <div class="job-field">
+          <label>Custom coaching prompt (optional)</label>
+          <textarea id="jobCustomPrompt" rows="3" placeholder="e.g. Focus on SRE stories, lean into CMRE HPC work, avoid mentioning contract details."></textarea>
+        </div>
+
+        <div class="row" style="justify-content:flex-end;gap:8px;margin-top:12px">
+          <button id="btnCancelJob" class="m3-btn m3-btn-text" type="button">Cancel</button>
+          <button id="btnSaveJob" class="m3-btn m3-btn-filled" type="button">Save & activate</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Hotkeys help modal -->
+  <div id="helpModal" class="modal hidden">
+    <div class="modal-content modal-wide">
+      <div class="row" style="justify-content:space-between;align-items:center">
+        <h3>Keyboard shortcuts</h3>
+        <button id="btnCloseHelp" class="m3-btn m3-btn-text">Close</button>
+      </div>
+      <div class="hotkey-grid">
+        <div><kbd>Space</kbd> Answer the last detected question</div>
+        <div><kbd>R</kbd> Refine last answer: shorter</div>
+        <div><kbd>Shift</kbd>+<kbd>R</kbd> Refine: longer</div>
+        <div><kbd>E</kbd> Refine: add example</div>
+        <div><kbd>S</kbd> Refine: simpler / less jargon</div>
+        <div><kbd>1</kbd>–<kbd>6</kbd> Re-run last Q as Answer / Clarify / Follow-ups / STAR / Code / Bridge</div>
+        <div><kbd>C</kbd> Clear answers</div>
+        <div><kbd>Y</kbd> Copy last answer to clipboard</div>
+        <div><kbd>M</kbd> Toggle menu drawer</div>
+        <div><kbd>P</kbd> Pop out answers (Picture-in-Picture)</div>
+        <div><kbd>?</kbd> This help</div>
+        <div><kbd>Esc</kbd> Close drawer / modal</div>
+      </div>
+    </div>
+  </div>
+
+  <script src="/Interview/marked.min.js"></script>
+  <script src="/Interview/app.js"></script>
+</body>
+</html>

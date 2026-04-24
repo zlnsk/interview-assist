@@ -1,0 +1,1613 @@
+/* =============================================================================
+   Interview Assistant — app styles (2026-04-16 unify pass)
+
+   Philosophy:
+   - All pills, chips, icon buttons come from shared M3 primitives
+     (m3-btn / m3-chip / m3-icon-btn) loaded BEFORE this file.
+   - This file owns layout, scroll behavior, role tinting, domain widgets.
+     It does NOT redefine heights, paddings, or radii of standard chrome.
+   - One source of truth per axis:
+       * Compact status/meta pills  -> 32px  (m3-chip)
+       * Primary/destructive pills  -> 40px  (m3-btn)
+       * Icon-only buttons          -> 40×40 (m3-icon-btn)
+       * Eyebrow labels             -> letter-spacing 0.12em
+       * Brand title                -> letter-spacing 0.25em (from .m3-brand-title)
+   ========================================================================== */
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+:root {
+  /* Back-compat aliases onto shared M3 tokens so legacy rules don't fall back
+     to old dark hex values. Do NOT introduce new palette hardcodes. */
+  --bg: var(--m3-surface);
+  --surface: var(--m3-surface-container-low);
+  --surface2: var(--m3-surface-container-high);
+  --border: var(--m3-outline-variant);
+  --border2: var(--m3-outline);
+  --text: var(--m3-on-surface);
+  --text2: var(--m3-on-surface-variant);
+  --accent: var(--m3-primary);
+  --danger: var(--m3-error);
+  --green: var(--m3-success, #16a34a);
+  --blue: var(--m3-primary);
+  --purple: var(--m3-primary);
+  --orange: #f97316;
+  --radius: var(--m3-shape-sm);
+  --shadow: rgba(0, 0, 0, 0.08);
+  --modal-bg: rgba(0, 0, 0, 0.4);
+}
+
+html, body {
+  height: 100dvh;
+  overflow: hidden;
+}
+
+/* Kill the shared overlay's pink radial gradient on this app — cockpit is
+   a working surface, not a marketing hero. Uses !important to beat the
+   overlay's !important background rule. */
+html,
+body {
+  background: var(--m3-surface) !important;
+  background-image: none !important;
+  color: var(--m3-on-surface) !important;
+  font-family: var(--m3-font-brand, "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif) !important;
+  min-height: 100dvh;
+}
+
+@media (prefers-color-scheme: dark) {
+  html, body {
+    background: var(--m3-surface) !important;
+    background-image: none !important;
+  }
+}
+
+/* =============================================================================
+   App shell — cockpit grid
+   ========================================================================== */
+#app {
+  display: grid;
+  grid-template-rows: auto 1fr;
+  grid-template-columns: 1fr;
+  height: 100dvh;
+}
+#app > header#topbar { grid-column: 1 / -1; }
+
+/* Desktop (>= 900px): two-column split — assistant on the left (70%), side
+   panel on the right (30%). Side panel stacks the shared-tab video mini on
+   top and the transcript/speakers below. Topbar spans both columns. */
+@media (min-width: 900px) {
+  #app {
+    grid-template-columns: 70fr 30fr;
+    grid-template-rows: auto minmax(0, 1fr);
+    grid-template-areas:
+      "topbar  topbar"
+      "answers side";
+  }
+  #app > header#topbar { grid-area: topbar; }
+  #answerPanel         { grid-area: answers; }
+  #sidePanel           { grid-area: side; }
+}
+
+/* Small screens (< 900px): stack everything — assistant on top, side panel
+   (video mini + transcript) below. */
+@media (max-width: 899px) {
+  #app {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto minmax(280px, 2fr) minmax(0, 1fr);
+    grid-template-areas:
+      "topbar"
+      "answers"
+      "side";
+  }
+  #app > header#topbar { grid-area: topbar; }
+  #answerPanel         { grid-area: answers; }
+  #sidePanel           { grid-area: side; }
+}
+
+/* Interview label box — lives inside the Sessions drawer tab only (no
+   longer occupies the main screen). */
+#ivLabelBox {
+  padding: 12px 14px;
+  border: 1px solid var(--m3-outline-variant);
+  border-radius: var(--m3-shape-lg);
+  background: var(--m3-surface-container-low);
+  margin-bottom: 12px;
+}
+.iv-box-label {
+  font: var(--m3-label-sm);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--m3-on-surface-variant);
+  margin-bottom: 6px;
+}
+.iv-box-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+.iv-input {
+  flex: 1 1 0;
+  min-width: 0;
+  background: transparent;
+  border: none;
+  border-bottom: 1px dashed var(--m3-outline-variant);
+  color: var(--m3-on-surface);
+  font: var(--m3-body-md);
+  font-weight: 600;
+  padding: 2px 4px;
+  outline: none;
+}
+.iv-input::placeholder {
+  color: var(--m3-on-surface-variant);
+  font-weight: 400;
+  font-style: italic;
+}
+.iv-input:focus { border-bottom-color: var(--m3-primary); }
+.iv-sep { color: var(--m3-on-surface-variant); flex: 0 0 auto; }
+.iv-status {
+  flex: 0 0 auto;
+  font: var(--m3-label-sm);
+  color: var(--m3-on-surface-variant);
+  min-width: 60px;
+  text-align: right;
+}
+
+/* Side panel — right column, vertical flex: video mini on top, transcript
+   below. `min-height: 0` on #transcriptPanel lets the scroll area actually
+   scroll inside the column. */
+#sidePanel {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  min-height: 0;
+  border-left: 1px solid var(--m3-outline-variant);
+  background: transparent;
+}
+#sidePanel #transcriptPanel {
+  flex: 1 1 auto;
+  min-height: 0;
+  border-top: 1px solid var(--m3-outline-variant);
+}
+
+/* Shared-tab video mini — 16:9 preview at the top of the side column. When
+   no stream is attached (class="empty"), the placeholder message shows and
+   the <video> element is hidden. */
+#videoMini {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  background: var(--m3-surface-container-lowest, #000);
+  overflow: hidden;
+  flex-shrink: 0;
+}
+#videoMini video {
+  width: 100%;
+  height: 100%;
+  display: block;
+  object-fit: contain;
+  background: #000;
+}
+#videoMini.empty video { display: none; }
+#videoMini .video-empty {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 16px;
+  text-align: center;
+  font: var(--m3-label-md);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--m3-on-surface-variant);
+  background: var(--m3-surface-container-low, transparent);
+}
+#videoMini:not(.empty) .video-empty { display: none; }
+
+/* =============================================================================
+   Top Bar — single 40px row, pills centered, clusters separated by --m3-space-4
+   ========================================================================== */
+#topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--m3-space-4);
+  padding: var(--m3-space-2) var(--m3-space-4);
+  min-height: 56px;
+  background: color-mix(in srgb, var(--m3-surface) 88%, transparent);
+  backdrop-filter: saturate(1.4) blur(14px);
+  -webkit-backdrop-filter: saturate(1.4) blur(14px);
+  border-bottom: 1px solid var(--m3-outline-variant);
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+.topbar-cluster {
+  display: flex;
+  align-items: center;
+  gap: var(--m3-space-2);
+  min-height: 40px; /* the lock: every pill lives on a 40px row */
+}
+
+/* Overrides shared overlay's "CANONICAL HERO" treatment which forces
+   1.75rem / centered / 20px top padding / #1e293b. For the cockpit topbar
+   we want a compact 14px eyebrow-sized brand that sits on the 40px row. */
+#topbar .topbar-brand,
+#topbar h1.m3-brand-title {
+  font-size: 14px !important;
+  line-height: 1 !important;
+  letter-spacing: 0.22em !important;
+  margin: 0 !important;
+  padding: 0 var(--m3-space-2) 0 0 !important;
+  text-align: start !important;
+  color: var(--m3-on-surface) !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  width: auto !important;
+}
+
+/* Status chip — tonal success when active, neutral outline when idle.
+   Overrides a few m3-chip defaults ONLY for the status dot. */
+.status-chip {
+  font: var(--m3-label-md);
+  text-transform: none;
+  letter-spacing: 0;
+}
+.status-chip .dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--m3-on-surface-variant);
+}
+.status-chip.active[data-selected="true"] {
+  background: color-mix(in srgb, var(--m3-success, #16a34a) 20%, var(--m3-surface));
+  color: var(--m3-on-surface);
+  border-color: transparent;
+}
+.status-chip.active .dot { background: var(--m3-success, #16a34a); }
+.status-chip.error        { color: var(--m3-error); border-color: var(--m3-error); }
+.status-chip.error .dot   { background: var(--m3-error); }
+
+/* Elapsed-interview timer chip. Neutral while idle, accent once counting. */
+.timer-chip {
+  font: var(--m3-label-md);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.02em;
+  gap: 6px;
+  text-transform: none;
+}
+.timer-chip .timer-text { font-feature-settings: "tnum"; }
+.timer-chip.running {
+  background: color-mix(in srgb, var(--m3-primary) 14%, var(--m3-surface));
+  color: var(--m3-on-surface);
+  border-color: transparent;
+}
+.timer-chip.paused {
+  opacity: 0.7;
+}
+
+/* Mode chips cluster — uses text buttons at 32px for compact action feel */
+.mode-chips {
+  display: flex;
+  gap: var(--m3-space-2);
+  flex-wrap: wrap;
+}
+/* Compact 32px text-button mode chip. !important beats overlay's
+   .m3-btn { min-height: 40px } rule so we can keep the 32px compact row. */
+#topbar .mode-btn.m3-btn {
+  height: 32px !important;
+  min-height: 32px !important;
+  font: var(--m3-label-md) !important;
+  padding: 0 var(--m3-space-3) !important;
+  color: var(--m3-on-surface-variant);
+}
+#topbar .mode-btn.m3-btn[data-selected="true"],
+#topbar .mode-btn.m3-btn.active {
+  background: var(--m3-secondary-container);
+  color: var(--m3-on-secondary-container);
+}
+
+/* Model select — styled as a 32px chip-like pill.
+   Uses !important to beat overlay.css which forces 48px min-height on selects. */
+.model-select-wrap { display: inline-flex; align-items: center; }
+#topbar select.model-select {
+  appearance: none !important;
+  -webkit-appearance: none !important;
+  height: 32px !important;
+  min-height: 32px !important;
+  padding: 0 28px 0 var(--m3-space-3) !important;
+  border-radius: var(--m3-shape-full) !important;
+  border: 1px solid var(--m3-outline-variant) !important;
+  background-color: transparent !important;
+  color: var(--m3-on-surface) !important;
+  font: var(--m3-label-md) !important;
+  cursor: pointer;
+  background-image:
+    linear-gradient(45deg, transparent 50%, var(--m3-on-surface-variant) 50%),
+    linear-gradient(135deg, var(--m3-on-surface-variant) 50%, transparent 50%) !important;
+  background-position: calc(100% - 14px) 50%, calc(100% - 9px) 50% !important;
+  background-size: 5px 5px, 5px 5px !important;
+  background-repeat: no-repeat !important;
+  box-shadow: none !important;
+  transition: border-color 150ms ease, background-color 150ms ease;
+}
+#topbar select.model-select:hover  { border-color: var(--m3-outline) !important; }
+#topbar select.model-select:focus-visible {
+  outline: 2px solid var(--m3-primary) !important;
+  outline-offset: 2px;
+}
+
+/* Destructive variant for shared m3-btn: flips fg/bg to error tokens.
+   !important beats overlay.css which forces --m3-primary on .m3-btn-filled. */
+.m3-btn.m3-btn-error,
+.m3-btn.m3-btn-filled.m3-btn-error,
+button.m3-btn-filled.m3-btn-error {
+  --_bg: var(--m3-error);
+  --_fg: var(--m3-on-error, #fff);
+  --_state: var(--m3-on-error, #fff);
+  background: var(--m3-error) !important;
+  color: var(--m3-on-error, #fff) !important;
+  box-shadow: var(--m3-elev-1);
+}
+
+/* =============================================================================
+   Panels
+   ========================================================================== */
+#answerPanel,
+#transcriptPanel {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  min-height: 0;
+  background: transparent;
+}
+
+/* Divider between answers (top) and transcript (bottom). Single 1px line,
+   subtle — sits on the transcript panel's top edge so it's always shown,
+   at every viewport width. */
+#transcriptPanel { border-top: 1px solid var(--m3-outline-variant); }
+
+/* Panel headers — LOCKED to identical 56px row on both sides so the
+   horizontal divider under TRANSCRIPT and ASSISTANT lands on the same
+   pixel. `height` (not min-height) + box-sizing:border-box + zero top/bottom
+   padding guarantees neither side can grow by 1px if a child pill is taller
+   than the other's. Applied to both #transcriptPanel .panel-header and
+   #answerPanel .panel-header via the same selector. */
+#transcriptPanel .panel-header,
+#answerPanel .panel-header,
+.panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--m3-space-3);
+  height: 56px;
+  min-height: 56px;
+  max-height: 56px;
+  padding: 0 16px;
+  margin: 0;
+  border-bottom: 1px solid var(--m3-outline-variant);
+  box-sizing: border-box;
+  flex-shrink: 0;
+}
+
+/* Unified section label — TRANSCRIPT / ASSISTANT. Matches eyebrow spec. */
+.m3-section-label,
+.panel-header h2 {
+  font: var(--m3-label-md);
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--m3-on-surface-variant);
+  margin: 0;
+}
+
+.panel-header .header-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--m3-space-2);
+}
+
+/* Slim variant — used by the assistant panel now that its pills moved to
+   the topbar. The only child is the ASSISTANT eyebrow label, so drop the
+   row height to a thin strip and tighten the font. Overrides the locked
+   56px rule above via higher specificity. */
+#answerPanel .panel-header.panel-header-slim {
+  height: 24px;
+  min-height: 24px;
+  max-height: 24px;
+  padding: 0 16px;
+}
+.panel-header.panel-header-slim h2 {
+  font-size: 0.68rem;
+  letter-spacing: 0.14em;
+}
+
+.scroll-area {
+  flex: 1;
+  overflow-y: auto;
+  padding: var(--m3-space-4) var(--m3-space-5);
+}
+
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  text-align: center;
+  gap: var(--m3-space-3);
+  color: var(--m3-on-surface-variant);
+  font: var(--m3-body-md);
+}
+.empty-state .hint {
+  font: var(--m3-label-md);
+  opacity: 0.8;
+  letter-spacing: 0.02em;
+}
+
+/* =============================================================================
+   Transcript entries
+   ========================================================================== */
+.utterance {
+  margin-bottom: var(--m3-space-4);
+  animation: fadeIn 0.15s ease;
+}
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(2px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.utterance .speaker-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--m3-space-2);
+  margin-bottom: 6px;
+  font: var(--m3-label-sm);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--m3-on-surface);
+}
+
+.utterance .speaker-tag .badge {
+  display: inline-flex;
+  align-items: center;
+  height: 20px;
+  padding: 0 var(--m3-space-2);
+  border-radius: var(--m3-shape-full);
+  font: var(--m3-label-sm);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  background: color-mix(in srgb, var(--m3-primary) 15%, transparent);
+  color: var(--m3-primary);
+  border: 1px solid color-mix(in srgb, var(--m3-primary) 35%, transparent);
+}
+.utterance .speaker-tag .badge.you {
+  background: transparent;
+  color: var(--m3-on-surface-variant);
+  border-color: var(--m3-outline-variant);
+}
+.utterance .text {
+  font: var(--m3-body-md);
+  line-height: 1.55;
+  color: var(--m3-on-surface);
+}
+.utterance.interim .text {
+  color: var(--m3-on-surface-variant);
+  font-style: italic;
+}
+.utterance.is-me .text { opacity: 0.6; }
+
+.speaker-legend {
+  display: flex;
+  gap: var(--m3-space-2);
+  flex-wrap: wrap;
+}
+.speaker-legend .legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 24px;
+  padding: 0 10px;
+  border-radius: var(--m3-shape-full);
+  border: 1px solid var(--m3-outline-variant);
+  font: var(--m3-label-sm);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--m3-on-surface-variant);
+  cursor: pointer;
+}
+.speaker-legend .legend-dot {
+  width: 7px; height: 7px;
+  border-radius: 50%;
+}
+
+/* =============================================================================
+   Answer cards
+   ========================================================================== */
+.answer-card {
+  background: var(--m3-surface-container-low);
+  border: 1px solid var(--m3-outline-variant);
+  border-radius: var(--m3-shape-lg);
+  padding: var(--m3-space-4) var(--m3-space-5);
+  margin-bottom: var(--m3-space-3);
+  animation: fadeIn 0.2s ease;
+}
+.answer-card.refinement {
+  border-inline-start: 3px solid var(--m3-primary);
+}
+.answer-card .question {
+  font: var(--m3-label-md);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--m3-on-surface-variant);
+  border-bottom: 1px solid var(--m3-outline-variant);
+  padding-bottom: 10px;
+  margin-bottom: 10px;
+  font-weight: 500;
+}
+.answer-card .answer-text {
+  font: var(--m3-body-md);
+  line-height: 1.6;
+}
+.answer-card .answer-text h1,
+.answer-card .answer-text h2,
+.answer-card .answer-text h3 {
+  font-size: 1rem;
+  font-weight: 700;
+  margin: 0.6rem 0 0.25rem 0;
+  color: var(--m3-on-surface);
+}
+.answer-card .answer-text h1:first-child,
+.answer-card .answer-text h2:first-child,
+.answer-card .answer-text h3:first-child { margin-top: 0; }
+.answer-card .answer-text p { margin: 0.3rem 0; }
+.answer-card .answer-text ul,
+.answer-card .answer-text ol { margin: 0.3rem 0; padding-left: 1.2rem; }
+.answer-card .answer-text li { margin: 0.15rem 0; }
+.answer-card .answer-text strong { color: var(--m3-on-surface); font-weight: 600; }
+.answer-card .answer-text em     { color: var(--m3-on-surface-variant); }
+.answer-card .answer-text code {
+  background: var(--m3-surface-container-high);
+  padding: 2px 6px;
+  border-radius: var(--m3-shape-xs);
+  font-size: 0.82em;
+}
+.answer-card .answer-text blockquote {
+  border-left: 3px solid var(--m3-outline);
+  padding-left: 0.6rem;
+  margin: 0.4rem 0;
+  color: var(--m3-on-surface-variant);
+}
+.answer-card .answer-text hr {
+  border: none;
+  border-top: 1px solid var(--m3-outline-variant);
+  margin: 0.5rem 0;
+}
+.answer-card .answer-text .cursor {
+  display: inline-block;
+  width: 2px;
+  height: 1em;
+  background: var(--m3-primary);
+  animation: blink 0.8s infinite;
+  vertical-align: text-bottom;
+  margin-left: 1px;
+}
+@keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
+
+.answer-card .meta {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--m3-space-2);
+  margin-top: var(--m3-space-3);
+  padding-top: var(--m3-space-2);
+  border-top: 1px solid var(--m3-outline-variant);
+  font: var(--m3-label-sm);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--m3-on-surface-variant);
+  flex-wrap: wrap;
+}
+.answer-card .meta-mode {
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  background: var(--m3-surface-container-high);
+  padding: 2px 8px;
+  border-radius: var(--m3-shape-full);
+  font: var(--m3-label-sm);
+  color: var(--m3-on-surface-variant);
+}
+.answer-card .answer-toolbar {
+  display: flex;
+  gap: var(--m3-space-2);
+  flex-wrap: wrap;
+  margin-top: var(--m3-space-3);
+  padding-top: 10px;
+  border-top: 1px solid var(--m3-outline-variant);
+}
+.chip-mini {
+  display: inline-flex;
+  align-items: center;
+  height: 28px;
+  padding: 0 12px;
+  border-radius: var(--m3-shape-full);
+  background: transparent;
+  border: 1px solid var(--m3-outline-variant);
+  color: var(--m3-on-surface-variant);
+  font: var(--m3-label-md);
+  cursor: pointer;
+  transition: background 150ms ease, border-color 150ms ease, color 150ms ease;
+}
+.chip-mini:hover {
+  color: var(--m3-on-surface);
+  border-color: var(--m3-outline);
+  background: var(--m3-surface-container-high);
+}
+.chip-mini.copy { margin-inline-start: auto; }
+
+/* Mode re-run chips — subtly distinct from refinement chips via a primary
+   accent so the two groups are readable at a glance. */
+.chip-mini.chip-mode {
+  color: var(--m3-primary);
+  border-color: color-mix(in srgb, var(--m3-primary) 40%, var(--m3-outline-variant));
+}
+.chip-mini.chip-mode:hover {
+  background: color-mix(in srgb, var(--m3-primary) 10%, var(--m3-surface));
+  border-color: var(--m3-primary);
+  color: var(--m3-primary);
+}
+
+/* Divider between refinement chips and mode chips in the toolbar. */
+.answer-toolbar .toolbar-sep {
+  width: 1px;
+  align-self: stretch;
+  background: var(--m3-outline-variant);
+  margin: 0 4px;
+}
+
+/* =============================================================================
+   Drawer
+   ========================================================================== */
+.drawer {
+  position: fixed;
+  top: 0;
+  inset-inline-end: 0;
+  width: 420px;
+  height: 100dvh;
+  background: var(--m3-surface);
+  border-inline-start: 1px solid var(--m3-outline-variant);
+  z-index: 100;
+  display: flex;
+  flex-direction: column;
+  transition: transform 0.2s ease;
+}
+.drawer.hidden { transform: translateX(100%); }
+
+.drawer-header {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: var(--m3-space-2);
+  padding: var(--m3-space-4) var(--m3-space-4) 0;
+  border-bottom: 1px solid var(--m3-outline-variant);
+}
+.drawer-header #btnCloseDrawer { align-self: flex-end; }
+
+.drawer-tabs {
+  display: flex;
+  gap: 0;
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  border-bottom: 1px solid var(--m3-outline-variant);
+}
+.drawer-tabs .tab {
+  background: none;
+  border: none;
+  color: var(--m3-on-surface-variant);
+  padding: var(--m3-space-3) var(--m3-space-4);
+  font: var(--m3-label-lg);
+  border-bottom: 2px solid transparent;
+  cursor: pointer;
+  flex: 1;
+  min-width: 0;
+  letter-spacing: 0.01em;
+  transition: color 150ms ease, border-color 150ms ease;
+}
+.drawer-tabs .tab.active {
+  color: var(--m3-primary);
+  border-bottom-color: var(--m3-primary);
+}
+.drawer-tabs .tab:hover { color: var(--m3-on-surface); }
+
+.tab-pane { display: none; }
+.tab-pane.active { display: block; }
+
+.drawer-body {
+  padding: var(--m3-space-4) var(--m3-space-5);
+  overflow-y: auto;
+  flex: 1;
+}
+
+#uploadForm {
+  display: flex;
+  gap: var(--m3-space-2);
+  margin-bottom: var(--m3-space-4);
+  flex-wrap: wrap;
+  align-items: center;
+}
+#uploadForm select,
+.file-input-label {
+  display: inline-flex;
+  align-items: center;
+  height: 40px;
+  padding: 0 var(--m3-space-4);
+  border-radius: var(--m3-shape-full);
+  border: 1px solid var(--m3-outline-variant);
+  background: transparent;
+  color: var(--m3-on-surface);
+  font: var(--m3-label-lg);
+  cursor: pointer;
+}
+#uploadForm select {
+  min-width: 140px;
+  appearance: none;
+  -webkit-appearance: none;
+  padding-right: 34px;
+  background-image:
+    linear-gradient(45deg, transparent 50%, var(--m3-on-surface-variant) 50%),
+    linear-gradient(135deg, var(--m3-on-surface-variant) 50%, transparent 50%);
+  background-position: calc(100% - 18px) 50%, calc(100% - 13px) 50%;
+  background-size: 5px 5px, 5px 5px;
+  background-repeat: no-repeat;
+}
+.file-input-label input[type="file"] { display: none; }
+
+.stacked-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--m3-space-2);
+  margin-bottom: var(--m3-space-3);
+}
+.stacked-form input,
+.stacked-form textarea,
+.stacked-form select,
+.drawer input[type="text"],
+.drawer textarea,
+.drawer select {
+  background: transparent !important;
+  border: 1px solid var(--m3-outline-variant) !important;
+  color: var(--m3-on-surface) !important;
+  border-radius: var(--m3-shape-md) !important;
+  padding: 10px 12px !important;
+  min-height: 44px !important;
+  font: var(--m3-body-md);
+  font-family: inherit;
+  width: 100%;
+}
+.stacked-form textarea,
+.drawer textarea { resize: vertical; min-height: 80px; border-radius: var(--m3-shape-lg); }
+.stacked-form input:focus,
+.stacked-form textarea:focus,
+.stacked-form select:focus,
+.drawer input[type="text"]:focus,
+.drawer textarea:focus,
+.drawer select:focus {
+  outline: none;
+  border-color: var(--m3-primary);
+}
+.row { display: flex; gap: var(--m3-space-2); align-items: center; flex-wrap: wrap; }
+
+.hint-text {
+  color: var(--m3-on-surface-variant);
+  font: var(--m3-body-sm);
+  margin: var(--m3-space-2) 0;
+  line-height: 1.45;
+}
+.hint-row {
+  margin: 0;
+  padding: var(--m3-space-3) 0;
+  border-bottom: 1px solid var(--m3-outline-variant);
+}
+
+.checkbox-row {
+  display: flex;
+  align-items: center;
+  gap: var(--m3-space-3);
+  font: var(--m3-body-md);
+  color: var(--m3-on-surface);
+  cursor: pointer;
+  padding: 4px 0;
+}
+.checkbox-row input[type=checkbox] {
+  accent-color: var(--m3-primary);
+  width: 18px; height: 18px;
+}
+
+/* Doc list */
+.doc-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--m3-space-3);
+  padding: var(--m3-space-3) 0;
+  border-bottom: 1px solid var(--m3-outline-variant);
+}
+.doc-item:last-child { border-bottom: none; }
+.doc-item .doc-info {
+  display: flex; flex-direction: column; gap: 2px;
+  min-width: 0; flex: 1;
+}
+.doc-item .doc-name {
+  font: var(--m3-body-md);
+  font-weight: 500;
+  color: var(--m3-on-surface);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.doc-item .doc-type {
+  font: var(--m3-label-sm);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--m3-on-surface-variant);
+}
+.doc-item .btn-delete {
+  background: none;
+  border: none;
+  color: var(--m3-primary);
+  font: var(--m3-label-lg);
+  padding: 8px 14px;
+  border-radius: var(--m3-shape-full);
+  cursor: pointer;
+  transition: background 150ms ease;
+}
+.doc-item .btn-delete:hover { background: color-mix(in srgb, var(--m3-primary) 10%, transparent); }
+.doc-toggle { display: flex; align-items: center; gap: var(--m3-space-2); cursor: pointer; flex: 1; }
+.doc-toggle input[type=checkbox] { accent-color: var(--m3-primary); }
+
+/* Sessions/calendar */
+.cal-item,
+.session-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: var(--m3-space-2);
+  padding: var(--m3-space-3) 0;
+  border-bottom: 1px solid var(--m3-outline-variant);
+}
+.session-main { flex: 1 1 auto; min-width: 0; }
+.session-title {
+  font: var(--m3-title-sm);
+  font-weight: 600;
+  color: var(--m3-on-surface);
+  margin-bottom: 2px;
+}
+.session-title .muted {
+  color: var(--m3-on-surface-variant);
+  font-weight: 400;
+  font-style: italic;
+}
+.session-meta {
+  font: var(--m3-label-md);
+  color: var(--m3-on-surface-variant);
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.session-meta .sep::before { content: "·"; margin-right: 8px; opacity: 0.6; }
+.session-actions {
+  display: flex;
+  gap: 6px;
+  flex-shrink: 0;
+}
+.cal-info { flex: 1; min-width: 0; }
+.cal-item details { margin-top: 6px; font: var(--m3-label-md); }
+.cal-item details summary { cursor: pointer; color: var(--m3-on-surface-variant); }
+.cal-item details pre {
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  background: var(--m3-surface-container-high);
+  padding: 8px;
+  border-radius: var(--m3-shape-xs);
+  margin-top: 6px;
+  font: var(--m3-label-sm);
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+/* Usage dashboard */
+.usage-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: var(--m3-space-2);
+  margin-bottom: var(--m3-space-3);
+}
+.usage-card {
+  background: transparent;
+  border: 1px solid var(--m3-outline-variant);
+  border-radius: var(--m3-shape-lg);
+  padding: 12px 16px;
+}
+.usage-card-label {
+  font: var(--m3-label-sm);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--m3-on-surface-variant);
+}
+.usage-card-value {
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: var(--m3-on-surface);
+  margin-top: 2px;
+}
+.usage-table {
+  width: 100%;
+  border-collapse: collapse;
+  font: var(--m3-label-md);
+}
+.usage-table th,
+.usage-table td {
+  padding: 6px 8px;
+  border-bottom: 1px solid var(--m3-outline-variant);
+  text-align: left;
+}
+.usage-table th { color: var(--m3-on-surface-variant); font-weight: 500; }
+
+/* =============================================================================
+   Modals
+   ========================================================================== */
+.modal {
+  position: fixed;
+  inset: 0;
+  background: var(--modal-bg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 200;
+}
+.modal.hidden { display: none; }
+
+.modal-content {
+  background: var(--m3-surface-container-high);
+  border: 1px solid var(--m3-outline-variant);
+  border-radius: var(--m3-shape-xl);
+  box-shadow: var(--m3-elev-3);
+  padding: var(--m3-space-6);
+  max-width: 420px;
+  width: 90%;
+  text-align: center;
+}
+.modal-content h3 {
+  font-size: 1.1rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  margin-bottom: 6px;
+}
+.modal-content p {
+  font: var(--m3-body-md);
+  color: var(--m3-on-surface-variant);
+  margin-bottom: var(--m3-space-4);
+  line-height: 1.55;
+}
+
+.modal-content.modal-wide {
+  max-width: 720px;
+  text-align: left;
+}
+
+#speakerOptions {
+  display: flex;
+  flex-direction: column;
+  gap: var(--m3-space-2);
+  margin: var(--m3-space-4) 0;
+}
+#speakerOptions button {
+  display: flex;
+  align-items: center;
+  height: 48px;
+  padding: 0 var(--m3-space-4);
+  border-radius: var(--m3-shape-full);
+  border: 1px solid var(--m3-outline-variant);
+  background: transparent;
+  color: var(--m3-on-surface);
+  font: var(--m3-label-lg);
+  cursor: pointer;
+  text-align: left;
+  transition: background 150ms ease, border-color 150ms ease;
+}
+#speakerOptions button:hover {
+  background: var(--m3-surface-container-high);
+  border-color: var(--m3-outline);
+}
+
+/* Prose output (recap, prep) */
+.prose-output {
+  font: var(--m3-body-md);
+  line-height: 1.55;
+  margin-top: var(--m3-space-3);
+  max-height: 60vh;
+  overflow-y: auto;
+}
+.prose-output h1, .prose-output h2, .prose-output h3, .prose-output h4 {
+  margin: 0.7rem 0 0.3rem 0;
+  color: var(--m3-on-surface);
+}
+.prose-output p { margin: 0.3rem 0; }
+.prose-output ul, .prose-output ol { margin: 0.3rem 0; padding-left: 1.4rem; }
+.prose-output code {
+  background: var(--m3-surface-container-high);
+  padding: 2px 6px;
+  border-radius: var(--m3-shape-xs);
+  font-size: 0.82em;
+}
+.prose-output pre {
+  background: var(--m3-surface-container-high);
+  padding: 10px;
+  border-radius: var(--m3-shape-md);
+  overflow-x: auto;
+  margin: var(--m3-space-2) 0;
+}
+
+/* Hotkeys */
+.hotkey-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px 20px;
+  margin-top: var(--m3-space-4);
+  font: var(--m3-body-md);
+  color: var(--m3-on-surface);
+}
+kbd {
+  background: var(--m3-surface-container-high);
+  border: 1px solid var(--m3-outline-variant);
+  border-radius: 6px;
+  padding: 2px 6px;
+  font-family: ui-monospace, monospace;
+  font-size: 0.72rem;
+  color: var(--m3-on-surface);
+  margin: 0 2px;
+}
+
+/* =============================================================================
+   PiP (Document PiP answer pop-out — video preview is now inline in #videoMini)
+   ========================================================================== */
+.pip-root {
+  background: var(--m3-surface);
+  color: var(--m3-on-surface);
+  font-family: var(--m3-font-brand, inherit);
+  height: 100dvh;
+  padding: 10px;
+  overflow-y: auto;
+}
+.pip-header {
+  font: var(--m3-label-md);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--m3-on-surface-variant);
+  margin-bottom: 6px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--m3-outline-variant);
+}
+.pip-question {
+  font: var(--m3-body-sm);
+  color: var(--m3-on-surface-variant);
+  margin-bottom: 6px;
+  font-style: italic;
+}
+
+/* Scrollbar */
+.scroll-area::-webkit-scrollbar        { width: 6px; }
+.scroll-area::-webkit-scrollbar-track  { background: transparent; }
+.scroll-area::-webkit-scrollbar-thumb  {
+  background: var(--m3-outline-variant);
+  border-radius: 3px;
+}
+
+/* =============================================================================
+   Narrow screens — wrap topbar cleanly
+   ========================================================================== */
+@media (max-width: 900px) {
+  #topbar { flex-wrap: wrap; row-gap: var(--m3-space-2); }
+  .topbar-cluster { flex-wrap: wrap; }
+  .mode-chips { width: 100%; }
+}
+
+/* =============================================================================
+   Matrix-inspired refinements — delicate surfaces, hairline borders,
+   bubble-radius cards, Roboto type. Loaded last so these rules override the
+   M3 overlay + the earlier cockpit layer for the visible surfaces only.
+   Ported from the Matrix app design language (2026-04-24).
+   ========================================================================== */
+
+:root {
+  --mx-hairline:        color-mix(in oklch, currentColor 8%,  transparent);
+  --mx-hairline-strong: color-mix(in oklch, currentColor 14%, transparent);
+  --mx-sunken:          color-mix(in oklch, var(--m3-on-surface) 5%,  var(--m3-surface));
+  --mx-sunken-2:        color-mix(in oklch, var(--m3-on-surface) 8%,  var(--m3-surface));
+  --mx-glass:           color-mix(in oklch, var(--m3-surface) 72%, transparent);
+  --mx-accent-soft:     color-mix(in oklch, var(--m3-primary) 14%, var(--m3-surface));
+  --mx-accent-softer:   color-mix(in oklch, var(--m3-primary) 8%,  var(--m3-surface));
+  --mx-radius-bubble: 18px;
+  --mx-radius-tail: 6px;
+  --mx-radius-card: 12px;
+  --mx-ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --mx-ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+  --mx-sidebar-w: 320px;
+}
+
+/* Roboto everywhere with Roboto's stylistic alternates turned on — the single
+   typographic choice that most evokes the Matrix look. */
+html, body {
+  font-family: "Roboto", "Google Sans", ui-sans-serif, system-ui, -apple-system, "Segoe UI", "Helvetica Neue", Arial, sans-serif !important;
+  font-feature-settings: "cv02", "cv03", "cv04", "cv11", "ss01", "ss03";
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+/* Topbar — thinner, glassy, hairline underborder. */
+#topbar {
+  min-height: 48px !important;
+  padding: 4px 14px !important;
+  background: var(--mx-glass) !important;
+  border-bottom: 1px solid var(--mx-hairline) !important;
+  backdrop-filter: saturate(180%) blur(14px);
+  -webkit-backdrop-filter: saturate(180%) blur(14px);
+}
+#topbar .topbar-brand,
+#topbar h1.m3-brand-title {
+  font-size: 13px !important;
+  font-weight: 600 !important;
+  letter-spacing: 0.18em !important;
+  color: var(--m3-on-surface-variant) !important;
+}
+
+/* Chips (status, timer, usage, mode-rerun, refinement) — no border at rest,
+   soft sunken fill, gentle hover. */
+.m3-chip,
+.chip-mini {
+  border-radius: 9999px !important;
+  border: 1px solid transparent !important;
+  background: var(--mx-sunken) !important;
+  color: var(--m3-on-surface-variant) !important;
+  transition: background 200ms var(--mx-ease-out),
+              border-color 200ms var(--mx-ease-out),
+              color 200ms var(--mx-ease-out),
+              transform 200ms var(--mx-ease-out);
+}
+.m3-chip:hover,
+.chip-mini:hover {
+  background: var(--mx-sunken-2) !important;
+  border-color: var(--mx-hairline-strong) !important;
+  color: var(--m3-on-surface) !important;
+}
+.chip-mini.chip-mode {
+  background: transparent !important;
+  border-color: var(--mx-hairline-strong) !important;
+  color: var(--m3-primary) !important;
+}
+.chip-mini.chip-mode:hover {
+  background: var(--mx-accent-softer) !important;
+  border-color: var(--m3-primary) !important;
+}
+.status-chip.active[data-selected="true"] {
+  background: var(--mx-accent-soft) !important;
+  border-color: transparent !important;
+  color: var(--m3-on-surface) !important;
+}
+.timer-chip.running {
+  background: var(--mx-accent-soft) !important;
+  border-color: transparent !important;
+}
+
+/* Icon buttons (PiP, Menu) — pill, ghost by default. */
+.m3-icon-btn {
+  border-radius: 9999px !important;
+  background: transparent !important;
+  border: 1px solid transparent !important;
+  color: var(--m3-on-surface-variant) !important;
+  transition: background 200ms var(--mx-ease-out), color 200ms var(--mx-ease-out);
+}
+.m3-icon-btn:hover {
+  background: var(--mx-sunken-2) !important;
+  color: var(--m3-on-surface) !important;
+}
+
+/* Filled buttons (Share Tab Audio, Stop) — flatter, single color, no shadow. */
+.m3-btn.m3-btn-filled {
+  border-radius: 9999px !important;
+  box-shadow: none !important;
+  border: 1px solid transparent !important;
+}
+.m3-btn.m3-btn-outlined {
+  border-radius: 9999px !important;
+  border-color: var(--mx-hairline-strong) !important;
+  background: transparent !important;
+}
+.m3-btn.m3-btn-outlined:hover {
+  background: var(--mx-sunken) !important;
+  border-color: var(--m3-outline) !important;
+}
+
+/* Panel headers — lighter weight, hairline underline. */
+.panel-header,
+#transcriptPanel .panel-header,
+#answerPanel .panel-header {
+  border-bottom: 1px solid var(--mx-hairline) !important;
+  background: transparent !important;
+}
+.panel-header h2,
+.m3-section-label {
+  color: var(--m3-on-surface-variant) !important;
+  letter-spacing: 0.14em !important;
+  font-size: 11px !important;
+  font-weight: 600 !important;
+}
+
+/* Side panel + transcript panel — hairline divider, no heavy borders. */
+#sidePanel {
+  border-left: 1px solid var(--mx-hairline) !important;
+}
+#sidePanel #transcriptPanel {
+  border-top: 1px solid var(--mx-hairline) !important;
+}
+
+/* Answer cards — THE MATRIX MESSAGE BUBBLE. 18px radius, hairline border,
+   no shadow at rest, subtle lift on hover. Refinement cards sit on sunken
+   surface so the conversation rhythm is visible. */
+.answer-card {
+  border-radius: var(--mx-radius-bubble) !important;
+  border: 1px solid var(--mx-hairline) !important;
+  background: var(--m3-surface) !important;
+  box-shadow: none !important;
+  padding: 16px 18px !important;
+  margin-bottom: 10px !important;
+  transition: transform 200ms var(--mx-ease-out),
+              box-shadow 240ms var(--mx-ease-out),
+              border-color 200ms var(--mx-ease-out);
+  animation: mx-bubble-in 260ms var(--mx-ease-out) both;
+}
+.answer-card:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 18px -8px color-mix(in oklch, black 22%, transparent);
+  border-color: var(--mx-hairline-strong) !important;
+}
+.answer-card.refinement {
+  background: var(--mx-sunken) !important;
+  border-color: transparent !important;
+}
+.answer-card .question {
+  color: var(--m3-on-surface) !important;
+  font-weight: 600 !important;
+  font-size: 15px !important;
+  line-height: 1.45 !important;
+  margin-bottom: 8px !important;
+}
+.answer-card .answer-text {
+  font-size: 15px !important;
+  line-height: 1.55 !important;
+  color: var(--m3-on-surface) !important;
+}
+.answer-card .answer-toolbar {
+  border-top: 1px solid var(--mx-hairline) !important;
+  padding-top: 10px !important;
+  margin-top: 12px !important;
+}
+.answer-card .meta {
+  font-size: 11px !important;
+  color: var(--m3-on-surface-variant) !important;
+  letter-spacing: 0.02em !important;
+}
+
+@keyframes mx-bubble-in {
+  from { opacity: 0; transform: translateY(6px) scale(0.98); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+/* Transcript utterances — true Matrix-style bubbles. Own mic = accent tint,
+   right-aligned with tail; interviewer = neutral sunken, left-aligned. */
+#transcript {
+  padding: 10px 12px !important;
+}
+.utterance {
+  max-width: 88%;
+  margin-bottom: 6px;
+  padding: 8px 12px !important;
+  border-radius: var(--mx-radius-bubble) !important;
+  background: var(--mx-sunken) !important;
+  border: 1px solid transparent !important;
+  animation: mx-bubble-in 220ms var(--mx-ease-out) both;
+}
+.utterance.is-me {
+  margin-left: auto;
+  background: var(--mx-accent-soft) !important;
+  border-bottom-right-radius: var(--mx-radius-tail) !important;
+}
+.utterance:not(.is-me) {
+  margin-right: auto;
+  border-bottom-left-radius: var(--mx-radius-tail) !important;
+}
+.utterance .speaker-tag {
+  font-size: 11px !important;
+  font-weight: 500 !important;
+  color: var(--m3-on-surface-variant) !important;
+  letter-spacing: 0.02em !important;
+  margin-bottom: 2px !important;
+}
+.utterance .text {
+  font-size: 14px !important;
+  line-height: 1.45 !important;
+  color: var(--m3-on-surface) !important;
+}
+.utterance.interim {
+  opacity: 0.7;
+  font-style: italic;
+}
+.utterance .badge {
+  display: inline-block;
+  padding: 1px 6px;
+  font-size: 9px !important;
+  letter-spacing: 0.1em;
+  border-radius: 9999px;
+  background: var(--mx-sunken-2);
+  color: var(--m3-on-surface-variant);
+  margin-left: 6px;
+  vertical-align: 1px;
+}
+.utterance .badge.you {
+  background: var(--mx-accent-soft);
+  color: var(--m3-on-surface);
+}
+
+/* Drawer — hairline border, delicate card radius, no heavy shadow. */
+.drawer {
+  border-left: 1px solid var(--mx-hairline) !important;
+  box-shadow: 0 0 60px -20px color-mix(in oklch, black 35%, transparent) !important;
+  background: var(--m3-surface) !important;
+}
+.drawer-header {
+  border-bottom: 1px solid var(--mx-hairline) !important;
+}
+.drawer-tabs .tab {
+  border-radius: 9999px !important;
+  padding: 6px 12px !important;
+  font-size: 13px !important;
+  color: var(--m3-on-surface-variant) !important;
+  background: transparent !important;
+  border: 1px solid transparent !important;
+  transition: background 200ms var(--mx-ease-out), color 200ms var(--mx-ease-out);
+}
+.drawer-tabs .tab:hover {
+  background: var(--mx-sunken) !important;
+  color: var(--m3-on-surface) !important;
+}
+.drawer-tabs .tab.active {
+  background: var(--mx-accent-soft) !important;
+  color: var(--m3-on-surface) !important;
+  font-weight: 600 !important;
+}
+
+/* Session item — card-shaped, hairline divider softened to almost nothing. */
+.session-item {
+  border-bottom: 1px solid var(--mx-hairline) !important;
+  border-radius: var(--mx-radius-card);
+  padding: 12px !important;
+  margin: 2px 0;
+  transition: background 200ms var(--mx-ease-out), transform 200ms var(--mx-ease-out);
+}
+.session-item:hover {
+  background: var(--mx-sunken) !important;
+  transform: translateY(-1px);
+}
+.session-title {
+  font-size: 15px !important;
+  font-weight: 600 !important;
+}
+.session-meta {
+  font-size: 12px !important;
+  color: var(--m3-on-surface-variant) !important;
+}
+
+/* Modals — bubble radius, hairline border, flat backdrop. Cap the height so
+   tall wizards (New Interview) scroll internally rather than overflowing the
+   viewport. */
+.modal-content {
+  border-radius: var(--mx-radius-card) !important;
+  border: 1px solid var(--mx-hairline) !important;
+  box-shadow: 0 20px 60px -20px color-mix(in oklch, black 35%, transparent) !important;
+  max-height: 88vh !important;
+  overflow-y: auto !important;
+  box-sizing: border-box;
+}
+.modal-content.modal-wide {
+  width: min(720px, 94vw) !important;
+  max-width: 720px !important;
+}
+/* Header row sticks while the body scrolls. */
+.modal-content > .row:first-child {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  background: var(--m3-surface);
+  padding-block: 4px;
+  margin: calc(-1 * var(--m3-space-6)) calc(-1 * var(--m3-space-6)) 6px;
+  padding: 10px var(--m3-space-6);
+  border-bottom: 1px solid var(--mx-hairline);
+}
+/* Wizard textareas default to smaller heights so the modal fits without
+   scrolling for short JDs; they grow on demand. */
+.job-field textarea { min-height: 70px; }
+#jobJd { min-height: 120px; }
+#jobApplication { min-height: 90px; }
+/* Compact the wizard vertical rhythm. */
+.job-wizard { gap: 10px; }
+
+/* Inputs inside the label box — keep the Matrix-delicate look. */
+.iv-input {
+  font-family: inherit !important;
+}
+
+/* Focus ring — Matrix's halo. */
+:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--m3-surface),
+              0 0 0 4px color-mix(in oklch, var(--m3-primary) 60%, transparent) !important;
+  border-radius: 8px;
+}
+
+/* Respect reduced motion — kill entry animations and hover lifts. */
+@media (prefers-reduced-motion: reduce) {
+  .answer-card,
+  .utterance { animation: none !important; }
+  .answer-card:hover,
+  .session-item:hover { transform: none !important; }
+}
+
+/* =============================================================================
+   Jobs: active-job chip in topbar + wizard modal + jobs list
+   ========================================================================== */
+
+.active-job-chip {
+  gap: 6px !important;
+  padding: 2px 10px 2px 8px !important;
+  background: var(--mx-accent-soft) !important;
+  color: var(--m3-on-surface) !important;
+  max-width: 240px;
+}
+.active-job-chip .job-chip-text {
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.btn-new-interview {
+  padding: 0 12px !important;
+  height: 36px !important;
+  gap: 6px;
+  font-size: 13px !important;
+  font-weight: 500 !important;
+}
+
+/* Jobs list (drawer) — same bubble language as session items. */
+.job-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  padding: 12px;
+  margin: 4px 0;
+  border: 1px solid var(--mx-hairline);
+  border-radius: var(--mx-radius-card);
+  background: var(--m3-surface);
+  transition: background 200ms var(--mx-ease-out), transform 200ms var(--mx-ease-out), border-color 200ms var(--mx-ease-out);
+}
+.job-item:hover {
+  background: var(--mx-sunken);
+  transform: translateY(-1px);
+}
+.job-item.active {
+  border-color: var(--m3-primary);
+  background: var(--mx-accent-softer);
+}
+.job-item .job-main { flex: 1; min-width: 0; }
+.job-item .job-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--m3-on-surface);
+  margin-bottom: 2px;
+}
+.job-item .job-sub {
+  font-size: 12px;
+  color: var(--m3-on-surface-variant);
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.job-item .job-active-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--m3-primary);
+  flex-shrink: 0;
+}
+.job-item .job-actions {
+  display: flex;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+/* Wizard modal — generous layout, Matrix-delicate inputs. */
+.job-wizard {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  margin-top: 12px;
+}
+.job-field { display: flex; flex-direction: column; gap: 4px; }
+.job-field > label {
+  font-size: 11px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--m3-on-surface-variant);
+  font-weight: 600;
+}
+.job-field input[type="text"],
+.job-field select,
+.job-field textarea {
+  width: 100%;
+  padding: 10px 12px;
+  border-radius: var(--mx-radius-card);
+  border: 1px solid var(--mx-hairline-strong);
+  background: var(--m3-surface);
+  color: var(--m3-on-surface);
+  font: inherit;
+  font-size: 14px;
+  outline: none;
+  transition: border-color 200ms var(--mx-ease-out), box-shadow 200ms var(--mx-ease-out);
+}
+.job-field textarea {
+  resize: vertical;
+  min-height: 80px;
+  line-height: 1.45;
+  font-family: inherit;
+}
+.job-field input[type="text"]:focus,
+.job-field select:focus,
+.job-field textarea:focus {
+  border-color: var(--m3-primary);
+  box-shadow: 0 0 0 2px var(--mx-accent-soft);
+}
+.job-meta-row { flex-wrap: wrap; gap: 10px; }
+
+.competencies-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 4px;
+}
+.competency-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  border-radius: 9999px;
+  background: var(--mx-accent-softer);
+  border: 1px solid var(--mx-hairline);
+  font-size: 12px;
+  color: var(--m3-on-surface);
+}
+.competency-chip button {
+  background: none; border: none; cursor: pointer;
+  color: var(--m3-on-surface-variant);
+  font-size: 13px; line-height: 1; padding: 0;
+}
+.competency-chip button:hover { color: var(--m3-error); }
+
+.empty-jobs {
+  text-align: center;
+  padding: 40px 20px;
+  color: var(--m3-on-surface-variant);
+  font-size: 14px;
+}
